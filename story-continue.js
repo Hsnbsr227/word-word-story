@@ -316,24 +316,24 @@ function renderWritingMode(
   continueProgress.textContent = `${Object.keys(continues).length} / ${playerEntries.length}`;
 
   if (myAssignment) {
-    const previousParts = myAssignment.previousContinues || [];
+  const previousParts = myAssignment.previousContinues || [];
+  const lastPart = previousParts.length
+    ? previousParts[previousParts.length - 1]
+    : myAssignment.originalText;
 
-    givenStoryText.textContent = [
-      myAssignment.originalText,
-      ...previousParts,
-    ].join("\n\n");
+  givenStoryText.textContent = lastPart || "Öykü atanıyor...";
 
-    if (myAssignment.requiredWord) {
-      requiredWordBox.classList.remove("hidden");
-      requiredContinueWord.textContent = myAssignment.requiredWord;
-    } else {
-      requiredWordBox.classList.add("hidden");
-      requiredContinueWord.textContent = "---";
-    }
+  if (myAssignment.requiredWord) {
+    requiredWordBox.classList.remove("hidden");
+    requiredContinueWord.textContent = myAssignment.requiredWord;
   } else {
-    givenStoryText.textContent = "Öykü atanıyor...";
     requiredWordBox.classList.add("hidden");
+    requiredContinueWord.textContent = "---";
   }
+} else {
+  givenStoryText.textContent = "Öykü atanıyor...";
+  requiredWordBox.classList.add("hidden");
+}
 
   if (myContinue) {
     continueText.value = myContinue.text || "";
