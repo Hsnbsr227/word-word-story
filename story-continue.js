@@ -337,22 +337,18 @@ function renderWritingMode(
 }
 
   if (myContinue) {
-    continueText.value = myContinue.text || "";
-    continueText.disabled = true;
-    sendContinueBtn.disabled = true;
-    sendContinueBtn.textContent = "Gönderildi";
-    updateContinueWordCount();
-  } else {
-    continueText.disabled = false;
-    sendContinueBtn.disabled = false;
-    sendContinueBtn.textContent = "Devamı Gönder";
-
-    if (continueText.disabled === false && continueText.value && !myContinue) {
-      continueText.value = continueText.value;
-    }
-
-    updateContinueWordCount();
-  }
+  continueText.value = myContinue.text || "";
+  continueText.disabled = true;
+  sendContinueBtn.disabled = true;
+  sendContinueBtn.textContent = "Gönderildi";
+  updateContinueWordCount();
+} else {
+  continueText.value = "";
+  continueText.disabled = false;
+  sendContinueBtn.disabled = false;
+  sendContinueBtn.textContent = "Devamı Gönder";
+  updateContinueWordCount();
+}
 
   renderStatusList(playerEntries, continues, "Devamı gönderdi", "Devamı yazıyor");
 
