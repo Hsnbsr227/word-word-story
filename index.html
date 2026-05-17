@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Word Word Story</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="paper-card">
+          <p class="eyebrow">Birlikte yazılan garip, komik ve beklenmedik hikayeler</p>
+
+          <h1>Word Word Story</h1>
+
+          <p class="subtitle">
+            Arkadaşlarınla aynı oyuna gir, kelimeleri paylaş, hikayeleri birbirine karıştır.
+          </p>
+
+          <div class="name-area">
+            <label for="username">Kullanıcı Adı</label>
+            <input id="username" type="text" placeholder="Adını yaz..." maxlength="24" />
+          </div>
+
+          <div class="action-row">
+            <button id="createGameBtn" class="btn btn-primary" type="button">
+              Oyun Oluştur
+            </button>
+
+            <button id="joinGameBtn" class="btn btn-secondary" type="button">
+              Oyuna Katıl
+            </button>
+          </div>
+
+          <div id="joinPanel" class="join-panel hidden">
+            <label for="roomCode">Oda Kodu</label>
+
+            <div class="join-row">
+              <input id="roomCode" type="text" placeholder="Örn: A7K2Q" maxlength="8" />
+              <button id="confirmJoinBtn" class="btn btn-dark" type="button">
+                Katıl
+              </button>
+            </div>
+          </div>
+
+          <p id="message" class="message"></p>
+        </div>
+      </section>
+
+      <section class="how-to-play">
+        <div class="content">
+          <p class="section-label">Nasıl Oynanır?</p>
+
+          <h2>Herkes bir kelime bırakır, hikaye başka birine geçer.</h2>
+
+          <div class="rules-grid">
+            <article>
+              <span>1</span>
+              <h3>İlk turda kelimeler toplanır</h3>
+              <p>
+                Her oyuncu oyunun başında sadece bir kelime söyler. Bu kelimeler
+                oyunun hikaye malzemesi olur.
+              </p>
+            </article>
+
+            <article>
+              <span>2</span>
+              <h3>Hikaye yazılır</h3>
+              <p>
+                Her oyuncuya rastgele bir kelime gelir. Oyuncu bu kelimeyi kullanarak
+                en fazla 100 kelimelik bir hikaye yazar.
+              </p>
+            </article>
+
+            <article>
+              <span>3</span>
+              <h3>Hikayeler karışır</h3>
+              <p>
+                Yazılan hikayeler karışır ve rastgele başka oyunculara gider. Herkes
+                başka birinin hikayesini devam ettirir.
+              </p>
+            </article>
+          </div>
+
+          <p class="note">
+            Oyun sistemi şimdilik taslak halinde. Kuralları birlikte netleştirip
+            adım adım geliştireceğiz.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyClQLPxLpxA6PQOq36LbUJ0PGVtin-Cup8",
+    authDomain: "word-word-story-database.firebaseapp.com",
+    databaseURL: "https://word-word-story-database-default-rtdb.firebaseio.com",
+    projectId: "word-word-story-database",
+    storageBucket: "word-word-story-database.firebasestorage.app",
+    messagingSenderId: "669603122980",
+    appId: "1:669603122980:web:105fd27f629c9eb305adb1",
+    measurementId: "G-L10W3PJ3CX"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  window.__firebaseDB = db;
+  window.dispatchEvent(new Event("firebase-ready"));
+
+  console.log("Firebase hazır");
+</script>
+
+<script src="app.js"></script>
+
+  </body>
+</html>

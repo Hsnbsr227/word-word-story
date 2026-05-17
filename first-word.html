@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>İlk Kelime | Word Word Story</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <main class="word-page">
+      <section class="word-card">
+        <div class="word-top">
+          <button id="backWaitBtn" class="icon-btn" type="button" aria-label="Bekleme odasına dön">
+            ←
+          </button>
+
+          <div>
+            <p class="wait-kicker">İlk Tur</p>
+            <h1>Bir kelime bırak</h1>
+          </div>
+        </div>
+
+        <p class="word-desc">
+          Her oyuncu bu turda sadece bir kelime yazar. Bu kelimeler birazdan
+          hikayelerin içine rastgele dağılacak.
+        </p>
+
+        <div class="word-input-card">
+          <label for="firstWordInput">Senin kelimen</label>
+
+          <div class="word-row">
+            <input
+              id="firstWordInput"
+              type="text"
+              placeholder="Örn: fener"
+              maxlength="24"
+              autocomplete="off"
+            />
+
+            <button id="sendWordBtn" class="btn btn-primary" type="button">
+              Gönder
+            </button>
+          </div>
+
+          <p id="wordHint" class="word-hint">
+            Sadece tek kelime yaz. Boşluk kullanma.
+          </p>
+        </div>
+
+        <div class="players-head">
+          <h2>Kelime Durumu</h2>
+          <span id="wordProgress">0 / 0</span>
+        </div>
+
+        <div id="wordPlayersList" class="players-list">
+          <div class="empty-wait">Oyuncular yükleniyor...</div>
+        </div>
+
+        <div class="wait-actions">
+          <button id="nextRoundBtn" class="btn btn-primary hidden" type="button">
+            Hikaye Turuna Geç
+          </button>
+
+          <p id="wordInfo" class="wait-info">
+            Herkes kelimesini gönderince sonraki tura geçilecek.
+          </p>
+        </div>
+
+        <p id="wordMessage" class="message"></p>
+      </section>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+      import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyClQLPxLpxA6PQOq36LbUJ0PGVtin-Cup8",
+        authDomain: "word-word-story-database.firebaseapp.com",
+        databaseURL: "https://word-word-story-database-default-rtdb.firebaseio.com",
+        projectId: "word-word-story-database",
+        storageBucket: "word-word-story-database.firebasestorage.app",
+        messagingSenderId: "669603122980",
+        appId: "1:669603122980:web:105fd27f629c9eb305adb1",
+        measurementId: "G-L10W3PJ3CX"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      window.__firebaseDB = getDatabase(app);
+      window.dispatchEvent(new Event("firebase-ready"));
+    </script>
+
+    <script src="first-word.js"></script>
+  </body>
+</html>

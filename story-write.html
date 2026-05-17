@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Öykü Yaz | Word Word Story</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <main class="story-write-page">
+      <section class="story-write-card">
+        <p class="wait-kicker">Öykü Turu</p>
+        <h1>Kelimeyi kullan, kısa bir öykü yaz</h1>
+
+        <div class="assigned-word-box">
+          <span>Sana gelen kelime</span>
+          <strong id="assignedWord">---</strong>
+        </div>
+
+        <div class="story-editor">
+          <label for="storyText">Öykün</label>
+          <textarea
+            id="storyText"
+            placeholder="Kelimeyi öykünün içinde kullanarak yazmaya başla..."
+          ></textarea>
+
+          <div class="story-editor-bottom">
+            <span id="storyWordCount">0 / 100 kelime</span>
+            <button id="sendStoryBtn" class="btn btn-primary" type="button">
+              Öyküyü Gönder
+            </button>
+          </div>
+        </div>
+
+        <div class="players-head">
+          <h2>Öykü Durumu</h2>
+          <span id="storyProgress">0 / 0</span>
+        </div>
+
+        <div id="storyPlayersList" class="players-list">
+          <div class="empty-wait">Oyuncular yükleniyor...</div>
+        </div>
+
+        <div class="wait-actions">
+          <button id="nextStoryBtn" class="btn btn-primary hidden" type="button">
+            Devam Turuna Geç
+          </button>
+
+          <p id="storyInfo" class="wait-info">
+            Herkes öyküsünü gönderince sonraki tura geçilecek.
+          </p>
+        </div>
+
+        <p id="storyMessage" class="message"></p>
+      </section>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+      import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyClQLPxLpxA6PQOq36LbUJ0PGVtin-Cup8",
+        authDomain: "word-word-story-database.firebaseapp.com",
+        databaseURL: "https://word-word-story-database-default-rtdb.firebaseio.com",
+        projectId: "word-word-story-database",
+        storageBucket: "word-word-story-database.firebasestorage.app",
+        messagingSenderId: "669603122980",
+        appId: "1:669603122980:web:105fd27f629c9eb305adb1",
+        measurementId: "G-L10W3PJ3CX"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      window.__firebaseDB = getDatabase(app);
+      window.dispatchEvent(new Event("firebase-ready"));
+    </script>
+
+    <script src="story-write.js"></script>
+  </body>
+</html>

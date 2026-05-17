@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Öyküyü Devam Ettir | Word Word Story</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <main class="story-write-page">
+      <section class="story-write-card">
+        <p id="continueKicker" class="wait-kicker">Devam Turu</p>
+        <h1 id="continueTitle">Başkasının öyküsünü devam ettir</h1>
+
+        <div id="continueWordBox" class="word-input-card hidden">
+          <label for="continueWordInput">Bu tur için bir kelime bırak</label>
+
+          <div class="word-row">
+            <input
+              id="continueWordInput"
+              type="text"
+              placeholder="Örn: merdiven"
+              maxlength="24"
+              autocomplete="off"
+            />
+
+            <button id="sendContinueWordBtn" class="btn btn-primary" type="button">
+              Kelimeyi Gönder
+            </button>
+          </div>
+
+          <p class="word-hint">
+            Bu kelime rastgele başka bir oyuncuya verilecek. Metni görmeden kelime bırakıyorsun.
+          </p>
+        </div>
+
+        <div id="continueWritingBox">
+          <div id="requiredWordBox" class="assigned-word-box hidden">
+            <span>Bu tur kullanman gereken kelime</span>
+            <strong id="requiredContinueWord">---</strong>
+          </div>
+
+          <div class="given-story-box">
+            <span>Devam edeceğin öykü</span>
+            <p id="givenStoryText">Öykü yükleniyor...</p>
+          </div>
+
+          <div class="story-editor">
+            <label for="continueText">Senin devamın</label>
+            <textarea
+              id="continueText"
+              placeholder="Bu öykünün devamını yaz..."
+            ></textarea>
+
+            <div class="story-editor-bottom">
+              <span id="continueWordCount">0 / 100 kelime</span>
+              <button id="sendContinueBtn" class="btn btn-primary" type="button">
+                Devamı Gönder
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="players-head">
+          <h2 id="continueProgressTitle">Devam Durumu</h2>
+          <span id="continueProgress">0 / 0</span>
+        </div>
+
+        <div id="continuePlayersList" class="players-list">
+          <div class="empty-wait">Oyuncular yükleniyor...</div>
+        </div>
+
+        <div class="wait-actions">
+          <button id="finishGameBtn" class="btn btn-primary hidden" type="button">
+            Sonuçları Gör
+          </button>
+
+          <p id="continueInfo" class="wait-info">
+            Herkes devamını gönderince sonuçlara geçilecek.
+          </p>
+        </div>
+
+        <p id="continueMessage" class="message"></p>
+      </section>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+      import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyClQLPxLpxA6PQOq36LbUJ0PGVtin-Cup8",
+        authDomain: "word-word-story-database.firebaseapp.com",
+        databaseURL: "https://word-word-story-database-default-rtdb.firebaseio.com",
+        projectId: "word-word-story-database",
+        storageBucket: "word-word-story-database.firebasestorage.app",
+        messagingSenderId: "669603122980",
+        appId: "1:669603122980:web:105fd27f629c9eb305adb1",
+        measurementId: "G-L10W3PJ3CX"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      window.__firebaseDB = getDatabase(app);
+      window.dispatchEvent(new Event("firebase-ready"));
+    </script>
+
+    <script src="story-continue.js"></script>
+  </body>
+</html>

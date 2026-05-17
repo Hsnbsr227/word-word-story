@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bekleme Odası | Word Word Story</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <main class="wait-page">
+      <section class="wait-card">
+        <div class="wait-top">
+          <button id="backHomeBtn" class="icon-btn" type="button" aria-label="Ana sayfaya dön">
+            ←
+          </button>
+
+          <div>
+            <p class="wait-kicker">Bekleme Odası</p>
+            <h1>Oyuncular bekleniyor</h1>
+          </div>
+        </div>
+
+        <div class="code-box">
+          <p>Arkadaşların bu kodla katılacak</p>
+          <strong id="roomCodeText">-----</strong>
+          <button id="copyCodeBtn" class="small-btn" type="button">Kodu Kopyala</button>
+        </div>
+
+        <div class="players-head">
+          <h2>Oyuncular</h2>
+          <span id="playerCount">0 kişi</span>
+        </div>
+
+        <div id="playersList" class="players-list">
+          <div class="empty-wait">Oyuncular yükleniyor...</div>
+        </div>
+
+        <div class="wait-actions">
+          <button id="addBotsBtn" class="btn btn-secondary hidden" type="button">
+            4 Bot Ekle
+          </button>
+
+          <button id="startGameBtn" class="btn btn-primary hidden" type="button">
+            Oyunu Başlat
+          </button>
+
+          <p id="waitInfo" class="wait-info">
+            Oyun kurucusu oyunu başlatınca buradan devam edeceksin.
+          </p>
+      </div>
+
+        <p id="waitMessage" class="message"></p>
+      </section>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+      import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyClQLPxLpxA6PQOq36LbUJ0PGVtin-Cup8",
+        authDomain: "word-word-story-database.firebaseapp.com",
+        databaseURL: "https://word-word-story-database-default-rtdb.firebaseio.com",
+        projectId: "word-word-story-database",
+        storageBucket: "word-word-story-database.firebasestorage.app",
+        messagingSenderId: "669603122980",
+        appId: "1:669603122980:web:105fd27f629c9eb305adb1",
+        measurementId: "G-L10W3PJ3CX"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      window.__firebaseDB = getDatabase(app);
+      window.dispatchEvent(new Event("firebase-ready"));
+    </script>
+
+    <script src="room-wait.js"></script>
+  </body>
+</html>
