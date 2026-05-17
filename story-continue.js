@@ -285,15 +285,16 @@ function renderWordMode(playerEntries, roundWords, myWord, round, totalRounds) {
   continueInfo.textContent = `Devam turu ${round} / ${totalRounds}. Herkes kelime verince yazma kısmı açılacak.`;
 
   if (myWord) {
-    continueWordInput.value = myWord.word || "";
-    continueWordInput.disabled = true;
-    sendContinueWordBtn.disabled = true;
-    sendContinueWordBtn.textContent = "Gönderildi";
-  } else {
-    continueWordInput.disabled = false;
-    sendContinueWordBtn.disabled = false;
-    sendContinueWordBtn.textContent = "Kelimeyi Gönder";
-  }
+  continueWordInput.value = myWord.word || "";
+  continueWordInput.disabled = true;
+  sendContinueWordBtn.disabled = true;
+  sendContinueWordBtn.textContent = "Gönderildi";
+} else {
+  continueWordInput.value = "";
+  continueWordInput.disabled = false;
+  sendContinueWordBtn.disabled = false;
+  sendContinueWordBtn.textContent = "Kelimeyi Gönder";
+}
 
   renderStatusList(playerEntries, roundWords, "Kelimesini verdi", "Kelime bekleniyor");
 }
