@@ -29,7 +29,15 @@
 
           <div class="name-area">
             <label for="username">Kullanıcı Adı</label>
-            <input id="username" type="text" placeholder="Adını yaz..." maxlength="24" />
+            <input
+              id="username"
+              type="text"
+              placeholder="Adını yaz..."
+              maxlength="24"
+              autocomplete="off"
+              autocapitalize="none"
+              spellcheck="false"
+            />
           </div>
 
           <div class="action-row">
@@ -46,7 +54,15 @@
             <label for="roomCode">Oda Kodu</label>
 
             <div class="join-row">
-              <input id="roomCode" type="text" placeholder="Örn: A7K2Q" maxlength="8" />
+              <input
+                id="roomCode"
+                type="text"
+                placeholder="Örn: A7K2Q"
+                maxlength="8"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+              />
               <button id="confirmJoinBtn" class="btn btn-dark" type="button">
                 Katıl
               </button>
