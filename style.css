@@ -918,14 +918,25 @@ input:focus {
     flex: 0 0 42px;
   }
 
-  .code-box {
-    padding: 22px 16px;
-  }
+.code-box {
+  padding: 22px 14px;
+}
 
-  .code-box strong {
-    font-size: 42px;
-    letter-spacing: 5px;
-  }
+.code-box strong {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 64px;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 0 0 1px rgba(49, 92, 75, 0.08);
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: 4px;
+  white-space: nowrap;
+}
 
   .players-head {
     align-items: flex-start;
@@ -1017,13 +1028,141 @@ input:focus {
   }
 
   .code-box strong {
-    font-size: 34px;
-    letter-spacing: 4px;
+    min-height: 58px;
+    font-size: 32px;
+    letter-spacing: 3px;
   }
-
   .result-meta {
     align-items: flex-start;
     flex-direction: column;
   }
 }
 
+/* ============================================================
+   V1.1 HOME LOGO - DESKTOP
+   ============================================================ */
+
+.home-logo-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: -65px;
+  margin-bottom: -150px;
+}
+
+.home-logo {
+  display: block;
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+.home-logo-desktop {
+  width: 260px;
+  max-width: 48%;
+  opacity: 0.95;
+}
+
+@media (min-width: 761px) {
+  .paper-card {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+}
+
+@media (max-width: 760px) {
+  .home-logo-wrap {
+    display: none;
+  }
+}
+
+/* ============================================================
+   V1.1 HOME LOGO - MOBILE
+   ============================================================ */
+
+.home-mobile-logo {
+  display: none;
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .home-mobile-logo {
+    display: block;
+    width: min(310px, 94%);
+    margin: -26px auto -42px;
+  }
+
+  .paper-card h1 {
+    display: none;
+  }
+
+  .paper-card {
+    margin-top: 0;
+  }
+
+  .eyebrow {
+    margin-bottom: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .home-mobile-logo {
+    width: min(300px, 96%);
+    margin: -24px auto -40px;
+  }
+}
+
+/* ============================================================
+   V1.1 JOIN PANEL FIX
+   Kod paneli açılınca PC logosunu gizle
+   ============================================================ */
+
+@media (min-width: 761px) {
+  .paper-card:has(#joinPanel:not(.hidden)) .home-logo-wrap {
+    display: none;
+  }
+
+  .paper-card:has(#joinPanel:not(.hidden)) #joinPanel {
+    margin-top: 22px;
+  }
+}
+
+/* ============================================================
+   V1.1 WAIT ROOM COPY ACTIONS
+   ============================================================ */
+
+.code-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.code-actions .small-btn {
+  margin-top: 0;
+}
+
+.small-btn-soft {
+  color: var(--accent-dark);
+  background: #ffffff;
+  border: 1px solid rgba(49, 92, 75, 0.18);
+}
+
+.small-btn-soft:hover {
+  background: var(--paper);
+}
+
+@media (max-width: 520px) {
+  .code-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .code-actions .small-btn {
+    width: 100%;
+  }
+}

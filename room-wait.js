@@ -14,6 +14,7 @@ const username = localStorage.getItem("wws_username");
 
 const roomCodeText = $("roomCodeText");
 const copyCodeBtn = $("copyCodeBtn");
+const copyLinkBtn = $("copyLinkBtn");
 const backHomeBtn = $("backHomeBtn");
 const playersList = $("playersList");
 const playerCount = $("playerCount");
@@ -43,12 +44,14 @@ backHomeBtn.addEventListener("click", () => {
   window.location.href = "index.html";
 });
 
-copyCodeBtn.addEventListener("click", async () => {
+copyLinkBtn.addEventListener("click", async () => {
+  const roomLink = `${window.location.origin}/room-wait.html?code=${encodeURIComponent(roomCode)}`;
+
   try {
-    await navigator.clipboard.writeText(roomCode);
-    showMessage("Kod kopyalandı.");
+    await navigator.clipboard.writeText(roomLink);
+    showMessage("Oda linki kopyalandı.");
   } catch {
-    showMessage("Kod kopyalanamadı. Elle seçip kopyalayabilirsin.");
+    showMessage("Link kopyalanamadı. Tarayıcı adresini elle kopyalayabilirsin.");
   }
 });
 
