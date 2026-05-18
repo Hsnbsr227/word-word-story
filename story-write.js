@@ -35,6 +35,7 @@ if (window.__firebaseDB) {
 storyText.addEventListener("input", updateWordCount);
 sendStoryBtn.addEventListener("click", sendStory);
 nextStoryBtn.addEventListener("click", goNextRound);
+lockMobileFocusScroll(storyText);
 
 async function fbMod() {
   return await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
@@ -306,4 +307,31 @@ function escapeHtml(value) {
 
 function showMessage(text) {
   storyMessage.textContent = text;
+}
+
+
+function lockMobileFocusScroll(element) {
+  if (!element) return;
+
+  element.addEventListener("touchstart", () => {
+    element.dataset.scrollY = String(window.scrollY || 0);
+  }, { passive: true });
+
+  element.addEventListener("focus", () => {
+    if (window.innerWidth > 760) return;
+
+    const savedY = Number(element.dataset.scrollY || window.scrollY || 0);
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: savedY, left: 0, behavior: "auto" });
+    });
+
+    setTimeout(() => {
+      window.scrollTo({ top: savedY, left: 0, behavior: "auto" });
+    }, 80);
+
+    setTimeout(() => {
+      window.scrollTo({ top: savedY, left: 0, behavior: "auto" });
+    }, 180);
+  });
 }
