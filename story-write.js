@@ -7,6 +7,7 @@ const params = new URLSearchParams(window.location.search);
 const roomCode = params.get("code");
 const username = localStorage.getItem("wws_username");
 const myKey = safeKey(username);
+const storyDraftKey = `wws_story_draft_${roomCode}_${myKey}`;
 
 const assignedWord = $("assignedWord");
 const storyText = $("storyText");
@@ -32,7 +33,10 @@ if (window.__firebaseDB) {
   });
 }
 
-storyText.addEventListener("input", updateWordCount);
+storyText.addEventListener("input", () => {
+  localStorage.setItem(storyDraftKey, storyText.value);
+  updateWordCount();
+});
 sendStoryBtn.addEventListener("click", sendStory);
 nextStoryBtn.addEventListener("click", goNextRound);
 lockMobileFocusScroll(storyText);
@@ -87,13 +91,15 @@ async function createAssignmentsIfNeeded(room) {
   if (playerKeys.length < 2 || wordKeys.length < 2) return;
 
   const updates = {};
+  const wordPairings = createPairings(
+    playerKeys,
+    wordKeys,
+    {},
+    `story-words:${roomCode}:${room.createdAt || ""}`
+  );
 
   playerKeys.forEach((playerKey, index) => {
-    let wordOwnerKey = wordKeys[(index + 1) % wordKeys.length];
-
-    if (wordOwnerKey === playerKey) {
-      wordOwnerKey = wordKeys[(index + 2) % wordKeys.length];
-    }
+    const wordOwnerKey = wordPairings[playerKey] || wordKeys[index % wordKeys.length];
 
     const wordData = firstWords[wordOwnerKey];
 
@@ -178,6 +184,17 @@ function renderStoryWrite(room) {
     sendStoryBtn.disabled = true;
     sendStoryBtn.textContent = "Gönderildi";
     updateWordCount();
+  } else {
+    const savedDraft = localStorage.getItem(storyDraftKey);
+
+    if (!storyText.value && savedDraft) {
+      storyText.value = savedDraft;
+      updateWordCount();
+    }
+
+    storyText.disabled = false;
+    sendStoryBtn.disabled = false;
+    sendStoryBtn.textContent = "Öyküyü Gönder";
   }
 
   if (isHost && submittedCount === totalCount && totalCount > 0) {
@@ -229,6 +246,7 @@ async function sendStory() {
       createdAt: Date.now(),
     });
 
+    localStorage.removeItem(storyDraftKey);
     showMessage("");
   } catch (error) {
     console.error(error);
@@ -280,6 +298,71 @@ function normalizeTurkish(value) {
     .replace(/â/g, "a")
     .replace(/î/g, "i")
     .replace(/û/g, "u");
+}
+
+function createPairings(sourceKeys, targetKeys, previousAssignments, seed) {
+  if (!sourceKeys.length || !targetKeys.length) return {};
+
+  let bestTargets = targetKeys.slice();
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const shuffledTargets = seededShuffle(targetKeys, `${seed}:${attempt}`);
+    const score = sourceKeys.reduce((total, sourceKey, index) => {
+      const targetKey = shuffledTargets[index % shuffledTargets.length];
+      const repeatsPreviousStory = previousAssignments?.[sourceKey]?.storyKey === targetKey;
+      const repeatsPreviousWord = previousAssignments?.[sourceKey]?.fromKey === targetKey;
+
+      return total
+        + (targetKey === sourceKey ? 100 : 0)
+        + (repeatsPreviousStory || repeatsPreviousWord ? 10 : 0);
+    }, 0);
+
+    if (score < bestScore) {
+      bestScore = score;
+      bestTargets = shuffledTargets;
+    }
+
+    if (score === 0) break;
+  }
+
+  return sourceKeys.reduce((pairings, sourceKey, index) => {
+    pairings[sourceKey] = bestTargets[index % bestTargets.length];
+    return pairings;
+  }, {});
+}
+
+function seededShuffle(values, seed) {
+  const shuffled = values.slice();
+  const random = mulberry32(hashString(seed));
+
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+function hashString(value) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < String(value).length; index++) {
+    hash ^= String(value).charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function mulberry32(seed) {
+  return function random() {
+    seed += 0x6d2b79f5;
+    let value = seed;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 

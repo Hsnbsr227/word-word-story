@@ -7,6 +7,8 @@ const params = new URLSearchParams(window.location.search);
 const roomCode = params.get("code");
 const username = localStorage.getItem("wws_username");
 const myKey = safeKey(username);
+let activeContinueDraftKey = "";
+let activeContinueWordDraftKey = "";
 
 const continueKicker = $("continueKicker");
 const continueTitle = $("continueTitle");
@@ -48,10 +50,16 @@ if (window.__firebaseDB) {
 
 continueWordInput.addEventListener("input", () => {
   continueWordInput.value = continueWordInput.value.replace(/\s+/g, "");
+  const round = roomData?.currentContinueRound || 1;
+  localStorage.setItem(getContinueWordDraftKey(round), continueWordInput.value);
 });
 
 sendContinueWordBtn.addEventListener("click", sendContinueWord);
-continueText.addEventListener("input", updateContinueWordCount);
+continueText.addEventListener("input", () => {
+  const round = roomData?.currentContinueRound || 1;
+  localStorage.setItem(getContinueDraftKey(round), continueText.value);
+  updateContinueWordCount();
+});
 sendContinueBtn.addEventListener("click", sendContinue);
 finishGameBtn.addEventListener("click", finishGame);
 lockMobileFocusScroll(continueText);
@@ -122,22 +130,27 @@ async function createContinueAssignmentsIfNeeded(room) {
   const updates = {};
   const roundWords = room.continueWords?.[round] || {};
   const wordOwnerKeys = Object.keys(roundWords).sort();
+  const previousAssignments = room.continueAssignments?.[round - 1] || {};
+  const storyPairings = createPairings(
+    playerKeys,
+    storyKeys,
+    previousAssignments,
+    `continue-stories:${roomCode}:${room.createdAt || ""}:${round}`
+  );
+  const wordPairings = createPairings(
+    playerKeys,
+    wordOwnerKeys,
+    {},
+    `continue-words:${roomCode}:${room.createdAt || ""}:${round}`
+  );
 
   playerKeys.forEach((playerKey, index) => {
-    let storyKey = storyKeys[(index + round) % storyKeys.length];
-
-    if (storyKey === playerKey && storyKeys.length > 1) {
-      storyKey = storyKeys[(index + round + 1) % storyKeys.length];
-    }
+    const storyKey = storyPairings[playerKey] || storyKeys[index % storyKeys.length];
 
     let requiredWord = "";
 
     if (needsNewWord(round) && wordOwnerKeys.length) {
-      let wordOwnerKey = wordOwnerKeys[(index + 1) % wordOwnerKeys.length];
-
-      if (wordOwnerKey === playerKey && wordOwnerKeys.length > 1) {
-        wordOwnerKey = wordOwnerKeys[(index + 2) % wordOwnerKeys.length];
-      }
+      const wordOwnerKey = wordPairings[playerKey] || wordOwnerKeys[index % wordOwnerKeys.length];
 
       requiredWord = roundWords[wordOwnerKey]?.word || "";
     }
@@ -290,8 +303,15 @@ function renderWordMode(playerEntries, roundWords, myWord, round, totalRounds) {
   continueWordInput.disabled = true;
   sendContinueWordBtn.disabled = true;
   sendContinueWordBtn.textContent = "Gönderildi";
+  localStorage.removeItem(getContinueWordDraftKey(round));
 } else {
-  continueWordInput.value = "";
+  const draftKey = getContinueWordDraftKey(round);
+
+  if (activeContinueWordDraftKey !== draftKey) {
+    continueWordInput.value = localStorage.getItem(draftKey) || "";
+    activeContinueWordDraftKey = draftKey;
+  }
+
   continueWordInput.disabled = false;
   sendContinueWordBtn.disabled = false;
   sendContinueWordBtn.textContent = "Kelimeyi Gönder";
@@ -342,9 +362,16 @@ function renderWritingMode(
   continueText.disabled = true;
   sendContinueBtn.disabled = true;
   sendContinueBtn.textContent = "Gönderildi";
+  localStorage.removeItem(getContinueDraftKey(round));
   updateContinueWordCount();
 } else {
-  continueText.value = "";
+  const draftKey = getContinueDraftKey(round);
+
+  if (activeContinueDraftKey !== draftKey) {
+    continueText.value = localStorage.getItem(draftKey) || "";
+    activeContinueDraftKey = draftKey;
+  }
+
   continueText.disabled = false;
   sendContinueBtn.disabled = false;
   sendContinueBtn.textContent = "Devamı Gönder";
@@ -423,6 +450,7 @@ async function sendContinueWord() {
       createdAt: Date.now(),
     });
 
+    localStorage.removeItem(getContinueWordDraftKey(round));
     showMessage("");
   } catch (error) {
     console.error(error);
@@ -468,6 +496,7 @@ async function sendContinue() {
       createdAt: Date.now(),
     });
 
+    localStorage.removeItem(getContinueDraftKey(round));
     showMessage("");
   } catch (error) {
     console.error(error);
@@ -525,6 +554,79 @@ function normalizeTurkish(value) {
     .replace(/â/g, "a")
     .replace(/î/g, "i")
     .replace(/û/g, "u");
+}
+
+function getContinueDraftKey(round) {
+  return `wws_continue_draft_${roomCode}_${myKey}_${round}`;
+}
+
+function getContinueWordDraftKey(round) {
+  return `wws_continue_word_draft_${roomCode}_${myKey}_${round}`;
+}
+
+function createPairings(sourceKeys, targetKeys, previousAssignments, seed) {
+  if (!sourceKeys.length || !targetKeys.length) return {};
+
+  let bestTargets = targetKeys.slice();
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const shuffledTargets = seededShuffle(targetKeys, `${seed}:${attempt}`);
+    const score = sourceKeys.reduce((total, sourceKey, index) => {
+      const targetKey = shuffledTargets[index % shuffledTargets.length];
+      const repeatsPreviousStory = previousAssignments?.[sourceKey]?.storyKey === targetKey;
+      const repeatsPreviousWord = previousAssignments?.[sourceKey]?.fromKey === targetKey;
+
+      return total
+        + (targetKey === sourceKey ? 100 : 0)
+        + (repeatsPreviousStory || repeatsPreviousWord ? 10 : 0);
+    }, 0);
+
+    if (score < bestScore) {
+      bestScore = score;
+      bestTargets = shuffledTargets;
+    }
+
+    if (score === 0) break;
+  }
+
+  return sourceKeys.reduce((pairings, sourceKey, index) => {
+    pairings[sourceKey] = bestTargets[index % bestTargets.length];
+    return pairings;
+  }, {});
+}
+
+function seededShuffle(values, seed) {
+  const shuffled = values.slice();
+  const random = mulberry32(hashString(seed));
+
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+function hashString(value) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < String(value).length; index++) {
+    hash ^= String(value).charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function mulberry32(seed) {
+  return function random() {
+    seed += 0x6d2b79f5;
+    let value = seed;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 function createBotContinue(botName, round, requiredWord) {
