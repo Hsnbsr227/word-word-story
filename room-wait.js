@@ -215,7 +215,7 @@ function renderSettings(settings, isHost) {
 
   const myPlayer = roomData?.players?.[safeKey(username)] || {};
   const isReady = Boolean(myPlayer.isReady || myPlayer.isHost);
-  readyBtn.textContent = isReady ? "Hazırım" : "Hazır Değilim";
+  readyBtn.textContent = isReady ? "Hazırı Geri Al" : "Hazır Ver";
   readyBtn.classList.toggle("is-ready", isReady);
 }
 

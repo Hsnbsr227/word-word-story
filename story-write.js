@@ -376,18 +376,8 @@ function renderTimer({ ring, text, title, note, remainingSeconds, progress, expi
   ring.style.setProperty("--timer-progress", `${progress * 100}%`);
   ring.closest(".round-timer")?.classList.toggle("is-low", remainingSeconds <= 10);
   text.textContent = String(remainingSeconds).padStart(2, "0");
-  title.textContent = expired ? "Süre doldu" : formatDuration(remainingSeconds);
+  title.textContent = expired ? "SÜRE DOLDU" : "KALAN YAZI SÜRESİ";
   note.textContent = expired ? "Öykü otomatik gönderiliyor..." : waitingText;
-}
-
-function formatDuration(seconds) {
-  if (seconds >= 60) {
-    const minutes = Math.floor(seconds / 60);
-    const rest = seconds % 60;
-    return rest ? `${minutes} dk ${rest} sn` : `${minutes} dakika`;
-  }
-
-  return `${seconds} saniye`;
 }
 
 function createTimeoutStory(word, authorName) {

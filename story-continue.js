@@ -818,7 +818,7 @@ function renderTimer({ ring, text, title, note, remainingSeconds, progress, expi
   ring.style.setProperty("--timer-progress", `${progress * 100}%`);
   ring.closest(".round-timer")?.classList.toggle("is-low", remainingSeconds <= 7);
   text.textContent = String(remainingSeconds).padStart(2, "0");
-  title.textContent = expired ? "Süre doldu" : `${remainingSeconds} saniye`;
+  title.textContent = expired ? "SÜRE DOLDU" : "KELİME SÜRESİ";
   note.textContent = expired ? "Tur otomatik hazırlanıyor..." : waitingText;
 }
 
