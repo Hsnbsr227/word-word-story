@@ -1,7 +1,10 @@
-let db;
+﻿let db;
 let roomData = null;
+let storyTimerId = null;
+let storyAutoSubmitStarted = false;
 
 const $ = (id) => document.getElementById(id);
+const DEFAULT_WRITING_SECONDS = 120;
 
 const params = new URLSearchParams(window.location.search);
 const roomCode = params.get("code");
@@ -18,6 +21,10 @@ const storyPlayersList = $("storyPlayersList");
 const nextStoryBtn = $("nextStoryBtn");
 const storyInfo = $("storyInfo");
 const storyMessage = $("storyMessage");
+const storyTimerRing = $("storyTimerRing");
+const storyTimerText = $("storyTimerText");
+const storyTimerTitle = $("storyTimerTitle");
+const storyTimerNote = $("storyTimerNote");
 
 if (!roomCode || !username) {
   window.location.href = "index.html";
@@ -74,8 +81,14 @@ async function initStoryWrite() {
       return;
     }
 
+    if (roomData.status === "finished") {
+      window.location.href = `results.html?code=${encodeURIComponent(roomCode)}`;
+      return;
+    }
+
     await createBotStoriesIfNeeded(roomData);
     renderStoryWrite(roomData);
+    startStoryTimer();
   });
 }
 
@@ -209,10 +222,68 @@ function renderStoryWrite(room) {
   }
 }
 
+function startStoryTimer() {
+  if (storyTimerId) return;
+
+  updateStoryTimer();
+  storyTimerId = setInterval(updateStoryTimer, 250);
+}
+
+function updateStoryTimer() {
+  if (!roomData || roomData.status !== "story-writing") return;
+
+  const startedAt = roomData.storyStartedAt || Date.now();
+  const durationMs = getWritingRoundDurationMs(roomData);
+  const elapsed = Math.max(0, Date.now() - startedAt);
+  const remainingMs = Math.max(0, durationMs - elapsed);
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  const progress = Math.max(0, Math.min(1, remainingMs / durationMs));
+
+  renderTimer({
+    ring: storyTimerRing,
+    text: storyTimerText,
+    title: storyTimerTitle,
+    note: storyTimerNote,
+    remainingSeconds,
+    progress,
+    expired: remainingMs <= 0,
+    waitingText: "Süre bitince taslak otomatik gönderilir.",
+  });
+
+  if (remainingMs <= 0) {
+    autoSubmitStory();
+  }
+}
+
+async function autoSubmitStory() {
+  if (storyAutoSubmitStarted || roomData?.stories?.[myKey]) return;
+
+  storyAutoSubmitStarted = true;
+
+  const assignment = roomData.storyAssignments?.[myKey];
+  if (!assignment) return;
+
+  let text = storyText.value.trim() || createTimeoutStory(assignment.word, username);
+
+  if (!containsAssignedWord(text, assignment.word)) {
+    text = `${text} ${assignment.word}`;
+  }
+
+  try {
+    await saveStory(text, assignment);
+    localStorage.removeItem(storyDraftKey);
+  } catch (error) {
+    console.error(error);
+    storyAutoSubmitStarted = false;
+    showMessage("Süre doldu ama öykü otomatik gönderilemedi.");
+  }
+}
+
 async function sendStory() {
   const text = storyText.value.trim();
   const words = countWords(text);
   const assignment = roomData.storyAssignments?.[myKey];
+  const maxWords = getMaxWords(roomData);
 
   if (!assignment) {
     showMessage("Sana henüz kelime atanmadı.");
@@ -225,8 +296,8 @@ async function sendStory() {
     return;
   }
 
-  if (words > 100) {
-    showMessage("Öykü en fazla 100 kelime olabilir.");
+  if (words > maxWords) {
+    showMessage(`Öykü en fazla ${maxWords} kelime olabilir.`);
     return;
   }
 
@@ -254,15 +325,27 @@ async function sendStory() {
   }
 }
 
+async function saveStory(text, assignment) {
+  const { ref, set } = await fbMod();
+
+  await set(ref(db, `rooms/${roomCode}/stories/${myKey}`), {
+    author: username,
+    text,
+    assignedWord: assignment.word,
+    createdAt: Date.now(),
+  });
+}
+
 async function goNextRound() {
   try {
     const { ref, update } = await fbMod();
     const playerCount = Object.keys(roomData.players || {}).length;
+    const settingsRounds = Number(roomData.settings?.continueRounds || 0);
 
     await update(ref(db, `rooms/${roomCode}`), {
       status: "story-continue",
       currentContinueRound: 1,
-      totalContinueRounds: Math.max(playerCount - 1, 1),
+      totalContinueRounds: settingsRounds || Math.max(playerCount - 1, 1),
       continueStartedAt: Date.now(),
     });
   } catch (error) {
@@ -274,8 +357,41 @@ async function goNextRound() {
 
 function updateWordCount() {
   const count = countWords(storyText.value);
-  storyWordCount.textContent = `${count} / 100 kelime`;
-  storyWordCount.classList.toggle("danger", count > 100);
+  const maxWords = getMaxWords(roomData || {});
+  storyWordCount.textContent = `${count} / ${maxWords} kelime`;
+  storyWordCount.classList.toggle("danger", count > maxWords);
+}
+
+function getWritingRoundDurationMs(room) {
+  return Number(room.settings?.writingSeconds || DEFAULT_WRITING_SECONDS) * 1000;
+}
+
+function getMaxWords(room) {
+  return Number(room.settings?.maxWords || 100);
+}
+
+function renderTimer({ ring, text, title, note, remainingSeconds, progress, expired, waitingText }) {
+  if (!ring || !text || !title || !note) return;
+
+  ring.style.setProperty("--timer-progress", `${progress * 100}%`);
+  ring.closest(".round-timer")?.classList.toggle("is-low", remainingSeconds <= 10);
+  text.textContent = String(remainingSeconds).padStart(2, "0");
+  title.textContent = expired ? "Süre doldu" : formatDuration(remainingSeconds);
+  note.textContent = expired ? "Öykü otomatik gönderiliyor..." : waitingText;
+}
+
+function formatDuration(seconds) {
+  if (seconds >= 60) {
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return rest ? `${minutes} dk ${rest} sn` : `${minutes} dakika`;
+  }
+
+  return `${seconds} saniye`;
+}
+
+function createTimeoutStory(word, authorName) {
+  return `${authorName || "Oyuncu"}, ${word} kelimesini son anda yakaladı. Cümleler kısa kaldı ama hikaye bu beklenmedik kelimeyle yeni bir yola girdi.`;
 }
 
 function countWords(text) {
@@ -367,7 +483,14 @@ function mulberry32(seed) {
 
 
 function createBotStory(word, botName) {
-  return `${botName}, ${word} kelimesini duyunca kısa bir an durdu. Sonra herkesin sustuğu o masada, bu kelimenin aslında bütün hikayeyi değiştireceğini fark etti.`;
+  const templates = [
+    `${botName}, ${word} kelimesini duyunca masadaki sessizliği fark etti. Bu küçük işaret, birazdan herkesin yanlış kapıyı açmasına neden olacaktı.`,
+    `${word} önce sıradan bir kelime gibi göründü. Ama ${botName}, onun sakladığı anlamı çözünce odadaki bütün planlar değişti.`,
+    `${botName}, cebinden çıkan notta yalnızca ${word} yazdığını gördü. Not kısa, gece uzundu; kimse sabaha aynı kişi olarak çıkmayacaktı.`,
+    `${word}, ${botName} için eski bir hatıranın anahtarıydı. Hatıra canlanınca hikaye sessizce komik ve tehlikeli bir yöne saptı.`,
+  ];
+
+  return templates[Math.abs(hashString(`${botName}:${word}`)) % templates.length];
 }
 
 function safeKey(value) {

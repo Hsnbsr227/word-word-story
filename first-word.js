@@ -9,7 +9,7 @@ let firstWordTimerId = null;
 let firstWordAutoAdvanceStarted = false;
 
 const $ = (id) => document.getElementById(id);
-const WORD_ROUND_DURATION_MS = 30 * 1000;
+const DEFAULT_WORD_SECONDS = 30;
 const AUTO_WORDS = [
   "zaman",
   "ışık",
@@ -108,6 +108,16 @@ async function initFirstWord() {
     if (roomData.status === "story-writing") {
      window.location.href = `story-write.html?code=${encodeURIComponent(roomCode)}`;
      return;
+    }
+
+    if (roomData.status === "story-continue") {
+      window.location.href = `story-continue.html?code=${encodeURIComponent(roomCode)}`;
+      return;
+    }
+
+    if (roomData.status === "finished") {
+      window.location.href = `results.html?code=${encodeURIComponent(roomCode)}`;
+      return;
     }
 
 
@@ -279,9 +289,10 @@ function updateFirstWordTimer() {
 
   const startedAt = getFirstWordStartedAt(roomData);
   const elapsed = Math.max(0, Date.now() - startedAt);
-  const remainingMs = Math.max(0, WORD_ROUND_DURATION_MS - elapsed);
+  const durationMs = getWordRoundDurationMs(roomData);
+  const remainingMs = Math.max(0, durationMs - elapsed);
   const remainingSeconds = Math.ceil(remainingMs / 1000);
-  const progress = Math.max(0, Math.min(1, remainingMs / WORD_ROUND_DURATION_MS));
+  const progress = Math.max(0, Math.min(1, remainingMs / durationMs));
 
   renderTimer({
     ring: firstWordTimerRing,
@@ -301,6 +312,10 @@ function updateFirstWordTimer() {
 
 function getFirstWordStartedAt(room) {
   return room.firstWordStartedAt || room.startedAt || room.createdAt || Date.now();
+}
+
+function getWordRoundDurationMs(room) {
+  return Number(room.settings?.wordSeconds || DEFAULT_WORD_SECONDS) * 1000;
 }
 
 async function autoCompleteFirstWordRound() {

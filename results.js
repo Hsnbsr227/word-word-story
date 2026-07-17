@@ -1,9 +1,17 @@
 let db;
+let currentRoom = null;
 
 const $ = (id) => document.getElementById(id);
+const VOTE_CATEGORIES = [
+  { key: "funny", label: "En Komik" },
+  { key: "twist", label: "En Beklenmedik" },
+  { key: "flow", label: "En İyi Devam" },
+];
 
 const params = new URLSearchParams(window.location.search);
 const roomCode = params.get("code");
+const username = localStorage.getItem("wws_username") || "Anonim";
+const myKey = safeKey(username);
 
 const resultsList = $("resultsList");
 const homeBtn = $("homeBtn");
@@ -40,7 +48,8 @@ async function initResults() {
     return;
   }
 
-  renderResults(roomSnap.val());
+  currentRoom = roomSnap.val();
+  renderResults(currentRoom);
 }
 
 function renderResults(room) {
@@ -70,6 +79,7 @@ function renderResults(room) {
         </div>
 
         <div class="merged-story-flow"></div>
+        <div class="vote-panel"></div>
       `;
 
       const flow = card.querySelector(".merged-story-flow");
@@ -86,8 +96,53 @@ function renderResults(room) {
         flow.appendChild(block);
       });
 
+      renderVotePanel(card.querySelector(".vote-panel"), room, storyKey);
       resultsList.appendChild(card);
     });
+}
+
+function renderVotePanel(container, room, storyKey) {
+  const votes = room.votes || {};
+
+  container.innerHTML = VOTE_CATEGORIES.map((category) => {
+    const categoryVotes = votes[category.key] || {};
+    const myVote = categoryVotes[myKey];
+    const count = Object.values(categoryVotes).filter((voteStoryKey) => voteStoryKey === storyKey).length;
+    const isSelected = myVote === storyKey;
+
+    return `
+      <button
+        class="vote-btn ${isSelected ? "selected" : ""}"
+        type="button"
+        data-category="${escapeHtml(category.key)}"
+        data-story="${escapeHtml(storyKey)}"
+      >
+        <span>${escapeHtml(category.label)}</span>
+        <strong>${count}</strong>
+      </button>
+    `;
+  }).join("");
+
+  container.querySelectorAll(".vote-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      voteForStory(button.dataset.category, button.dataset.story);
+    });
+  });
+}
+
+async function voteForStory(category, storyKey) {
+  try {
+    const { ref, get, set } = await fbMod();
+    await set(ref(db, `rooms/${roomCode}/votes/${category}/${myKey}`), storyKey);
+
+    const roomSnap = await get(ref(db, `rooms/${roomCode}`));
+    if (roomSnap.exists()) {
+      currentRoom = roomSnap.val();
+      renderResults(currentRoom);
+    }
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 function collectStoryParts(storyKey, story, continuesByRound) {
@@ -122,4 +177,10 @@ function escapeHtml(value) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function safeKey(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[.#$/[\]]/g, "_");
 }

@@ -53,6 +53,60 @@
           <div class="empty-wait">Oyuncular yükleniyor...</div>
         </div>
 
+        <div class="settings-panel">
+          <div class="settings-head">
+            <div>
+              <p class="wait-kicker">Oda Ayarları</p>
+              <h2>Tempo ve tur akışı</h2>
+            </div>
+            <button id="readyBtn" class="small-btn small-btn-soft" type="button">
+              Hazırım
+            </button>
+          </div>
+
+          <div id="roomSettingsForm" class="settings-grid">
+            <label>
+              Kelime süresi
+              <select id="wordSecondsSelect">
+                <option value="15">15 saniye</option>
+                <option value="30">30 saniye</option>
+                <option value="45">45 saniye</option>
+                <option value="60">60 saniye</option>
+              </select>
+            </label>
+
+            <label>
+              Yazma süresi
+              <select id="writingSecondsSelect">
+                <option value="60">1 dakika</option>
+                <option value="120">2 dakika</option>
+                <option value="180">3 dakika</option>
+                <option value="300">5 dakika</option>
+              </select>
+            </label>
+
+            <label>
+              Devam turu
+              <select id="continueRoundsSelect">
+                <option value="0">Oyuncu sayısına göre</option>
+                <option value="1">1 tur</option>
+                <option value="2">2 tur</option>
+                <option value="3">3 tur</option>
+                <option value="4">4 tur</option>
+              </select>
+            </label>
+
+            <label>
+              Kelime sınırı
+              <select id="maxWordsSelect">
+                <option value="60">60 kelime</option>
+                <option value="100">100 kelime</option>
+                <option value="140">140 kelime</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div class="wait-actions">
           <button id="addBotsBtn" class="btn btn-secondary hidden" type="button">
             4 Bot Ekle

@@ -2,6 +2,8 @@ let db;
 let roomData = null;
 let continueWordTimerId = null;
 let continueWordAutoCompleteRound = null;
+let continueTimerId = null;
+let continueAutoSubmitKey = "";
 
 const $ = (id) => document.getElementById(id);
 
@@ -11,7 +13,8 @@ const username = localStorage.getItem("wws_username");
 const myKey = safeKey(username);
 let activeContinueDraftKey = "";
 let activeContinueWordDraftKey = "";
-const WORD_ROUND_DURATION_MS = 30 * 1000;
+const DEFAULT_WORD_SECONDS = 30;
+const DEFAULT_WRITING_SECONDS = 120;
 const AUTO_WORDS = [
   "zaman",
   "ışık",
@@ -42,6 +45,10 @@ const givenStoryText = $("givenStoryText");
 const continueText = $("continueText");
 const continueWordCount = $("continueWordCount");
 const sendContinueBtn = $("sendContinueBtn");
+const continueTimerRing = $("continueTimerRing");
+const continueTimerText = $("continueTimerText");
+const continueTimerTitle = $("continueTimerTitle");
+const continueTimerNote = $("continueTimerNote");
 
 const continueProgressTitle = $("continueProgressTitle");
 const continueProgress = $("continueProgress");
@@ -357,6 +364,8 @@ function renderWritingMode(
 
   continueProgressTitle.textContent = "Devam Durumu";
   continueProgress.textContent = `${Object.keys(continues).length} / ${playerEntries.length}`;
+  startContinueTimer();
+  updateContinueTimer();
 
   if (myAssignment) {
   const previousParts = myAssignment.previousContinues || [];
@@ -479,11 +488,81 @@ async function sendContinueWord() {
   }
 }
 
+function startContinueTimer() {
+  if (continueTimerId) return;
+
+  updateContinueTimer();
+  continueTimerId = setInterval(updateContinueTimer, 250);
+}
+
+function updateContinueTimer() {
+  if (!roomData || roomData.status !== "story-continue") return;
+
+  const round = roomData.currentContinueRound || 1;
+  const assignments = roomData.continueAssignments?.[round] || {};
+  const continues = roomData.continues?.[round] || {};
+
+  if (!assignments[myKey] || continues[myKey]) return;
+
+  const startedAt = getContinueWritingStartedAt(roomData, round);
+  const durationMs = getWritingRoundDurationMs(roomData);
+  const elapsed = Math.max(0, Date.now() - startedAt);
+  const remainingMs = Math.max(0, durationMs - elapsed);
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  const progress = Math.max(0, Math.min(1, remainingMs / durationMs));
+
+  renderTimer({
+    ring: continueTimerRing,
+    text: continueTimerText,
+    title: continueTimerTitle,
+    note: continueTimerNote,
+    remainingSeconds,
+    progress,
+    expired: remainingMs <= 0,
+    waitingText: "Süre bitince taslak otomatik gönderilir.",
+  });
+
+  if (remainingMs <= 0) {
+    autoSubmitContinue(round);
+  }
+}
+
+function getContinueWritingStartedAt(room, round) {
+  const assignedAt = room.continueAssignments?.[round]?.[myKey]?.assignedAt;
+  return assignedAt || room.continueStartedAt || Date.now();
+}
+
+async function autoSubmitContinue(round) {
+  const submitKey = `${round}:${myKey}`;
+  if (continueAutoSubmitKey === submitKey || roomData?.continues?.[round]?.[myKey]) return;
+
+  continueAutoSubmitKey = submitKey;
+
+  const assignment = roomData.continueAssignments?.[round]?.[myKey];
+  if (!assignment) return;
+
+  let text = continueText.value.trim() || createTimeoutContinue(assignment.requiredWord, username);
+
+  if (assignment.requiredWord && !containsAssignedWord(text, assignment.requiredWord)) {
+    text = `${text} ${assignment.requiredWord}`;
+  }
+
+  try {
+    await saveContinue(round, assignment, text);
+    localStorage.removeItem(getContinueDraftKey(round));
+  } catch (error) {
+    console.error(error);
+    continueAutoSubmitKey = "";
+    showMessage("Süre doldu ama devam otomatik gönderilemedi.");
+  }
+}
+
 async function sendContinue() {
   const text = continueText.value.trim();
   const words = countWords(text);
   const round = roomData.currentContinueRound || 1;
   const assignment = roomData.continueAssignments?.[round]?.[myKey];
+  const maxWords = getMaxWords(roomData);
 
   if (!assignment) {
     showMessage("Sana henüz öykü atanmadı.");
@@ -496,8 +575,8 @@ async function sendContinue() {
     return;
   }
 
-  if (words > 100) {
-    showMessage("Devam metni en fazla 100 kelime olabilir.");
+  if (words > maxWords) {
+    showMessage(`Devam metni en fazla ${maxWords} kelime olabilir.`);
     return;
   }
 
@@ -523,6 +602,18 @@ async function sendContinue() {
     console.error(error);
     showMessage("Devam gönderilirken bir sorun çıktı.");
   }
+}
+
+async function saveContinue(round, assignment, text) {
+  const { ref, set } = await fbMod();
+
+  await set(ref(db, `rooms/${roomCode}/continues/${round}/${myKey}`), {
+    author: username,
+    storyKey: assignment.storyKey,
+    text,
+    requiredWord: assignment.requiredWord || "",
+    createdAt: Date.now(),
+  });
 }
 
 async function finishGame() {
@@ -551,8 +642,13 @@ async function finishGame() {
 
 function updateContinueWordCount() {
   const count = countWords(continueText.value);
-  continueWordCount.textContent = `${count} / 100 kelime`;
-  continueWordCount.classList.toggle("danger", count > 100);
+  const maxWords = getMaxWords(roomData || {});
+  continueWordCount.textContent = `${count} / ${maxWords} kelime`;
+  continueWordCount.classList.toggle("danger", count > maxWords);
+}
+
+function getMaxWords(room) {
+  return Number(room.settings?.maxWords || 100);
 }
 
 function countWords(text) {
@@ -623,9 +719,10 @@ function updateContinueWordTimer() {
 
   const startedAt = getContinueWordStartedAt(roomData, round) || Date.now();
   const elapsed = Math.max(0, Date.now() - startedAt);
-  const remainingMs = Math.max(0, WORD_ROUND_DURATION_MS - elapsed);
+  const durationMs = getWordRoundDurationMs(roomData);
+  const remainingMs = Math.max(0, durationMs - elapsed);
   const remainingSeconds = Math.ceil(remainingMs / 1000);
-  const progress = Math.max(0, Math.min(1, remainingMs / WORD_ROUND_DURATION_MS));
+  const progress = Math.max(0, Math.min(1, remainingMs / durationMs));
 
   renderTimer({
     ring: continueWordTimerRing,
@@ -645,6 +742,14 @@ function updateContinueWordTimer() {
 
 function getContinueWordStartedAt(room, round) {
   return room.continueWordStartedAtByRound?.[round] || 0;
+}
+
+function getWordRoundDurationMs(room) {
+  return Number(room.settings?.wordSeconds || DEFAULT_WORD_SECONDS) * 1000;
+}
+
+function getWritingRoundDurationMs(room) {
+  return Number(room.settings?.writingSeconds || DEFAULT_WRITING_SECONDS) * 1000;
 }
 
 async function autoCompleteContinueWordRound(round) {
@@ -797,10 +902,24 @@ function mulberry32(seed) {
 
 function createBotContinue(botName, round, requiredWord) {
   const wordPart = requiredWord
-    ? `${requiredWord} kelimesini de hikayenin içine katarak`
-    : "hikayenin akışını bozmadan";
+    ? `${requiredWord} kelimesini usulca ortaya bıraktı`
+    : "hikayenin akışını bozmadan ilerledi";
+  const templates = [
+    `${botName}, ${wordPart}. Karakterler bir an duraksadı, sonra en mantıksız görünen fikir hepsine fazla mantıklı gelmeye başladı.`,
+    `${botName}, ${wordPart} ve sahnenin havası değişti. Artık kimse önceki cümlenin güvenli olduğundan emin değildi.`,
+    `${botName}, ${wordPart}. Bu küçük hamle, hikayeyi hem komik hem de şüpheli bir çıkmaza sürükledi.`,
+    `${botName}, ${wordPart}; ardından herkesin sakladığı küçük sır bir anda fazla görünür oldu.`,
+  ];
 
-  return `${botName}, ${wordPart} olayları beklenmedik bir yöne çevirdi. Herkes bundan sonra ne olacağını merak ederken, hikaye daha da tuhaf ve eğlenceli bir hale geldi.`;
+  return templates[(round + Math.abs(hashString(`${botName}:${requiredWord}`))) % templates.length];
+}
+
+function createTimeoutContinue(requiredWord, authorName) {
+  const wordPart = requiredWord
+    ? `${requiredWord} kelimesini hikayeye iliştirerek`
+    : "hikayenin ritmini bozmadan";
+
+  return `${authorName || "Oyuncu"}, ${wordPart} kısa ama net bir devam yazdı. Olaylar hızlandı, karakterler yeni bir kararın eşiğine geldi.`;
 }
 
 function safeKey(value) {

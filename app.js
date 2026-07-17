@@ -5,6 +5,13 @@
 
 let db;
 
+const DEFAULT_SETTINGS = {
+  wordSeconds: 30,
+  writingSeconds: 120,
+  continueRounds: 0,
+  maxWords: 100,
+};
+
 const state = {
   username: localStorage.getItem("wws_username") || "",
 };
@@ -70,11 +77,14 @@ createGameBtn.addEventListener("click", async () => {
       status: "waiting",
       createdBy: username,
       createdAt: Date.now(),
+      settings: DEFAULT_SETTINGS,
       players: {
         [safeKey(username)]: {
           name: username,
           joinedAt: Date.now(),
           isHost: true,
+          isReady: true,
+          color: getPlayerColor(username),
         },
       },
       firstWords: {},
@@ -144,6 +154,8 @@ confirmJoinBtn.addEventListener("click", async () => {
       name: username,
       joinedAt: Date.now(),
       isHost: false,
+      isReady: false,
+      color: getPlayerColor(username),
     });
 
     localStorage.setItem("wws_username", username);
@@ -179,6 +191,26 @@ function safeKey(value) {
   return String(value)
     .trim()
     .replace(/[.#$/[\]]/g, "_");
+}
+
+function getPlayerColor(value) {
+  const colors = [
+    "#315c4b",
+    "#8f3f35",
+    "#4a5f9f",
+    "#9a6a2f",
+    "#6d4b8f",
+    "#2f7287",
+    "#7a5635",
+    "#4f6f3b",
+  ];
+  let hash = 0;
+
+  for (const char of String(value || "")) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+
+  return colors[hash % colors.length];
 }
 
 function showMessage(text) {
