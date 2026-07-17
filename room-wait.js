@@ -201,9 +201,12 @@ async function startGame() {
   try {
     const { ref, update } = await fbMod();
 
+    const startedAt = Date.now();
+
     await update(ref(db, `rooms/${roomCode}`), {
       status: "first-word",
-      startedAt: Date.now(),
+      startedAt,
+      firstWordStartedAt: startedAt,
     });
   } catch (error) {
     console.error(error);

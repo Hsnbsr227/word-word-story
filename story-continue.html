@@ -22,6 +22,18 @@
         <h1 id="continueTitle">Başkasının öyküsünü devam ettir</h1>
 
         <div id="continueWordBox" class="word-input-card hidden">
+          <div class="round-timer round-timer-compact" aria-live="polite">
+            <div class="timer-ring" id="continueWordTimerRing">
+              <span id="continueWordTimerText">30</span>
+            </div>
+
+            <div class="timer-copy">
+              <span>Kelime süresi</span>
+              <strong id="continueWordTimerTitle">30 saniye</strong>
+              <p id="continueWordTimerNote">Süre bitince eksik kelimeler otomatik tamamlanır.</p>
+            </div>
+          </div>
+
           <label for="continueWordInput">Bu tur için bir kelime bırak</label>
 
           <div class="word-row">

@@ -1,5 +1,7 @@
 let db;
 let roomData = null;
+let continueWordTimerId = null;
+let continueWordAutoCompleteRound = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -9,6 +11,17 @@ const username = localStorage.getItem("wws_username");
 const myKey = safeKey(username);
 let activeContinueDraftKey = "";
 let activeContinueWordDraftKey = "";
+const WORD_ROUND_DURATION_MS = 30 * 1000;
+const AUTO_WORDS = [
+  "zaman",
+  "ışık",
+  "kapı",
+  "rüya",
+  "orman",
+  "anahtar",
+  "yol",
+  "ses",
+];
 
 const continueKicker = $("continueKicker");
 const continueTitle = $("continueTitle");
@@ -16,6 +29,10 @@ const continueTitle = $("continueTitle");
 const continueWordBox = $("continueWordBox");
 const continueWordInput = $("continueWordInput");
 const sendContinueWordBtn = $("sendContinueWordBtn");
+const continueWordTimerRing = $("continueWordTimerRing");
+const continueWordTimerText = $("continueWordTimerText");
+const continueWordTimerTitle = $("continueWordTimerTitle");
+const continueWordTimerNote = $("continueWordTimerNote");
 
 const continueWritingBox = $("continueWritingBox");
 const requiredWordBox = $("requiredWordBox");
@@ -81,6 +98,7 @@ async function initStoryContinue() {
 
   roomData = roomSnap.val();
 
+  await ensureContinueWordTimerStarted(roomData);
   await createContinueAssignmentsIfNeeded(roomData);
   await createBotContinueWordsIfNeeded(roomData);
   await createBotContinuesIfNeeded(roomData);
@@ -98,6 +116,7 @@ async function initStoryContinue() {
       return;
     }
 
+    await ensureContinueWordTimerStarted(roomData);
     await createBotContinueWordsIfNeeded(roomData);
     await createContinueAssignmentsIfNeeded(roomData);
     await createBotContinuesIfNeeded(roomData);
@@ -297,6 +316,8 @@ function renderWordMode(playerEntries, roundWords, myWord, round, totalRounds) {
   continueProgressTitle.textContent = "Kelime Durumu";
   continueProgress.textContent = `${Object.keys(roundWords).length} / ${playerEntries.length}`;
   continueInfo.textContent = `Devam turu ${round} / ${totalRounds}. Herkes kelime verince yazma kısmı açılacak.`;
+  startContinueWordTimer();
+  updateContinueWordTimer();
 
   if (myWord) {
   continueWordInput.value = myWord.word || "";
@@ -554,6 +575,151 @@ function normalizeTurkish(value) {
     .replace(/â/g, "a")
     .replace(/î/g, "i")
     .replace(/û/g, "u");
+}
+
+async function ensureContinueWordTimerStarted(room) {
+  const round = room.currentContinueRound || 1;
+
+  if (!needsNewWord(round) || room.continueAssignments?.[round]) return;
+
+  const players = room.players || {};
+  const words = room.continueWords?.[round] || {};
+
+  if (Object.keys(words).length >= Object.keys(players).length) return;
+  if (getContinueWordStartedAt(room, round)) return;
+
+  try {
+    const { ref, update } = await fbMod();
+
+    await update(ref(db, `rooms/${roomCode}/continueWordStartedAtByRound`), {
+      [round]: Date.now(),
+    });
+  } catch (error) {
+    console.warn("Devam kelime sayacı başlatılamadı:", error);
+  }
+}
+
+function startContinueWordTimer() {
+  if (continueWordTimerId) return;
+
+  updateContinueWordTimer();
+  continueWordTimerId = setInterval(updateContinueWordTimer, 250);
+}
+
+function updateContinueWordTimer() {
+  if (!roomData) return;
+
+  const round = roomData.currentContinueRound || 1;
+  const players = roomData.players || {};
+  const roundWords = roomData.continueWords?.[round] || {};
+
+  if (
+    !needsNewWord(round) ||
+    roomData.continueAssignments?.[round] ||
+    Object.keys(roundWords).length >= Object.keys(players).length
+  ) {
+    return;
+  }
+
+  const startedAt = getContinueWordStartedAt(roomData, round) || Date.now();
+  const elapsed = Math.max(0, Date.now() - startedAt);
+  const remainingMs = Math.max(0, WORD_ROUND_DURATION_MS - elapsed);
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  const progress = Math.max(0, Math.min(1, remainingMs / WORD_ROUND_DURATION_MS));
+
+  renderTimer({
+    ring: continueWordTimerRing,
+    text: continueWordTimerText,
+    title: continueWordTimerTitle,
+    note: continueWordTimerNote,
+    remainingSeconds,
+    progress,
+    expired: remainingMs <= 0,
+    waitingText: "Süre bitince eksik kelimeler otomatik tamamlanır.",
+  });
+
+  if (remainingMs <= 0) {
+    autoCompleteContinueWordRound(round);
+  }
+}
+
+function getContinueWordStartedAt(room, round) {
+  return room.continueWordStartedAtByRound?.[round] || 0;
+}
+
+async function autoCompleteContinueWordRound(round) {
+  if (continueWordAutoCompleteRound === round || !roomData) return;
+
+  continueWordAutoCompleteRound = round;
+
+  try {
+    const { ref, get, set, update } = await fbMod();
+
+    if (!roomData.continueWords?.[round]?.[myKey] && isValidWord(continueWordInput.value)) {
+      const typedWord = continueWordInput.value.trim().toLocaleLowerCase("tr-TR");
+
+      await set(ref(db, `rooms/${roomCode}/continueWords/${round}/${myKey}`), {
+        word: typedWord,
+        by: username,
+        createdAt: Date.now(),
+      });
+
+      localStorage.removeItem(getContinueWordDraftKey(round));
+    }
+
+    const roomRef = ref(db, `rooms/${roomCode}`);
+    const roomSnap = await get(roomRef);
+
+    if (!roomSnap.exists()) return;
+
+    const room = roomSnap.val();
+    const currentRound = room.currentContinueRound || 1;
+
+    if (currentRound !== round || !needsNewWord(round) || room.continueAssignments?.[round]) return;
+
+    const players = room.players || {};
+    const words = room.continueWords?.[round] || {};
+    const updates = {};
+
+    Object.entries(players).forEach(([playerKey, player], index) => {
+      if (words[playerKey]) return;
+
+      const typedWord =
+        playerKey === myKey && isValidWord(continueWordInput.value)
+          ? continueWordInput.value.trim().toLocaleLowerCase("tr-TR")
+          : "";
+
+      updates[`rooms/${roomCode}/continueWords/${round}/${playerKey}`] = {
+        word: typedWord || AUTO_WORDS[(index + round) % AUTO_WORDS.length],
+        by: player.name || "Oyuncu",
+        createdAt: Date.now() + index,
+        isAuto: !typedWord,
+      };
+    });
+
+    if (Object.keys(updates).length) {
+      await update(ref(db), updates);
+    }
+  } catch (error) {
+    console.error(error);
+    continueWordAutoCompleteRound = null;
+    showMessage("Süre doldu ama kelimeler otomatik tamamlanırken bir sorun çıktı.");
+  }
+}
+
+function renderTimer({ ring, text, title, note, remainingSeconds, progress, expired, waitingText }) {
+  if (!ring || !text || !title || !note) return;
+
+  ring.style.setProperty("--timer-progress", `${progress * 100}%`);
+  ring.closest(".round-timer")?.classList.toggle("is-low", remainingSeconds <= 7);
+  text.textContent = String(remainingSeconds).padStart(2, "0");
+  title.textContent = expired ? "Süre doldu" : `${remainingSeconds} saniye`;
+  note.textContent = expired ? "Tur otomatik hazırlanıyor..." : waitingText;
+}
+
+function isValidWord(value) {
+  const word = String(value || "").trim();
+  return Boolean(word) && !word.includes(" ") && /^[a-zA-ZğüşöçıİĞÜŞÖÇ]+$/.test(word);
 }
 
 function getContinueDraftKey(round) {
